@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Meteo Polis</string>
+    <string name="action_settings">Settings</string>
+    <string name="favorite">Favorite</string>
+    <string name="search">Search</string>
+    <string name="ow_app_id">c6f462fe69d4a14d792f92d5a40f9ea4</string>
+
+    <string name="location_permission_requirement"></string>
+    <string name="ok">Ok</string>
+    <string name="cancel">Cancel</string>
+    <string name="requested_location_permission_granted"></string>
+    <string name="requested_location_permission_denied"></string>
+    <string name="no_internet_message">No internet. Please connect to internet to know the weather wherever you are or whichever city you want to!</string>
+</resources>
