@@ -18,4 +18,9 @@ public class Utils {
         formatter.setTimeZone(TimeZone.getTimeZone("GMT-4"));
         return formatter.format(date);
     }
+
+    public static String getCurrentDate() {
+        SimpleDateFormat sdf = new SimpleDateFormat("dd MMM, EEE");
+        return sdf.format(new Date());
+    }
 }

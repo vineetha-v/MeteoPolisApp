@@ -20,7 +20,7 @@ import java.util.Map;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
-public class ForecastAdapter extends RecyclerView.Adapter<ForecastHolder> {
+public class ForecastAdapter extends RecyclerView.Adapter<ForecastAdapter.ForecastHolder> {
 
     private Context mContext;
     private  Map<String, List<WeatherForecast>>  weatherListMap;
@@ -43,7 +43,7 @@ public class ForecastAdapter extends RecyclerView.Adapter<ForecastHolder> {
     public void onBindViewHolder(@NonNull ForecastHolder holder, int position) {
         List<WeatherForecast> weatherObject = weatherListMap.get(daysList[position]);
         holder.day.setText(Utils.convertMillisecToDate(weatherObject.get(0).getDate()));
-        holder.temperature.setText(Utils.convertKelvinToCelsius(weatherObject.get(0).getMain().getTemp()));
+        holder.temperature.setText(Utils.convertKelvinToCels ius(weatherObject.get(0).getMain().getTemp()));
     }
 
     @Override
@@ -51,16 +51,18 @@ public class ForecastAdapter extends RecyclerView.Adapter<ForecastHolder> {
         return daysList.length;
     }
 
-}
-class ForecastHolder extends RecyclerView.ViewHolder{
+    class ForecastHolder extends RecyclerView.ViewHolder{
 
-    @BindView(R.id.tvDay)
-    TextView day;
-    @BindView(R.id.tvDayTemp)
-    TextView temperature;
+        @BindView(R.id.tvDay)
+        TextView day;
+        @BindView(R.id.tvDayTemp)
+        TextView temperature;
 
-    ForecastHolder(View itemView) {
-        super(itemView);
-        ButterKnife.bind(this, itemView);
+        ForecastHolder(View itemView) {
+            super(itemView);
+            ButterKnife.bind(this, itemView);
+        }
     }
+
 }
+

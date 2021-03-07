@@ -5,6 +5,8 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.VectorDrawable;
 import android.location.Location;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -28,10 +30,12 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ImageView;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.vv.meteopolis.R;
 import com.vv.meteopolis.model.Forecast;
 import com.vv.meteopolis.model.Weather;
@@ -43,12 +47,14 @@ import com.vv.meteopolis.view.adapter.ForecastAdapter;
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
 import butterknife.BindView;
@@ -64,6 +70,7 @@ import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import okhttp3.internal.Util;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
@@ -77,6 +84,7 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
 
     private static final int REQUEST_FINE_LOCATION_PERMISSIONS_REQUEST_CODE = 100;
     private static final int SEARCH_CITY_REQUEST_CODE = 101;
+    private static final int FAVORITE_CITY_REQUEST_CODE = 102;
 
     private static  final String TAG = MainActivity.class.getSimpleName();
 
@@ -87,6 +95,7 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
     File httpCacheDirectory;
     SharedPreferences sharedPreferences;
     SharedPreferences.Editor prefEditor;
+    private boolean cityFetched = false;
 
     @BindView(R.id.tvWeatherMain) TextView txtMainWeather;
     @BindView(R.id.tvSecTemp) TextView txtSecTemp;
@@ -106,6 +115,7 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
     @BindView(R.id.rvDayWeather) RecyclerView rvForecast;
 
     @BindView(R.id.viewRoot) View mainView;
+    private List<String> favoriteArrayList = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -120,6 +130,7 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
         mainView = findViewById(R.id.viewRoot);
         sharedPreferences = getSharedPreferences("MeteoPolisPref",MODE_PRIVATE);
         prefEditor = sharedPreferences.edit();
+        fetchFavsList();
         mLocationClient = LocationServices.getFusedLocationProviderClient(this);
         httpCacheDirectory = new File(getCacheDir(), "offlineCache");
         setupRetrofitAndOkHttp();
@@ -128,6 +139,61 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
     @OnClick(R.id.iv_search)
     void searchCity(){
         startActivityForResult(new Intent(MainActivity.this, SearchActivity.class), SEARCH_CITY_REQUEST_CODE);
+    }
+
+    private boolean checkIfCityIsFav(String cityName) {
+        if(favoriteArrayList.contains(cityName)) {
+            imgFavorite.setImageDrawable(getResources().getDrawable(R.drawable.ic_favorite_selected));
+            return true;
+        } else {
+            imgFavorite.setImageDrawable(getResources().getDrawable(R.drawable.ic_favorite_unselected));
+            return false;
+        }
+    }
+
+    private void fetchFavsList() {
+        Gson gson = new Gson();
+        String json = sharedPreferences.getString("favorite", null);
+        Type type = new TypeToken<ArrayList<String>>() {
+        }.getType();
+        favoriteArrayList = gson.fromJson(json, type);
+        if (favoriteArrayList == null) {
+            favoriteArrayList = new ArrayList<>();
+        }
+    }
+
+    @OnClick(R.id.iv_favorite)
+    void setFavoriteCity() {
+        Gson gson = new Gson();
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        String city_name = txtCityName.getText().toString();
+        if(checkIfCityIsFav(city_name)) {
+            favoriteArrayList.add(city_name);
+            imgFavorite.setImageDrawable(getResources().getDrawable(R.drawable.ic_favorite_unselected));
+        } else {
+            favoriteArrayList.remove(city_name);
+            imgFavorite.setImageDrawable(getResources().getDrawable(R.drawable.ic_favorite_selected));
+        }
+        String jsonConvert = gson.toJson(favoriteArrayList);
+        editor.putString("favorite", jsonConvert);
+        editor.apply();
+    }
+
+    @OnClick(R.id.iv_more)
+    void openSettings() {
+        PopupMenu popup = new PopupMenu(MainActivity.this, imgMore);
+        popup.getMenuInflater().inflate(R.menu.menu_scrolling, popup.getMenu());
+        popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+            public boolean onMenuItemClick(MenuItem item) {
+                if(item.getItemId() == R.id.action_settings) {
+                    Intent intent = new Intent(MainActivity.this, FavoritesActivity.class);
+                    intent.putStringArrayListExtra("cities", (ArrayList<String>) favoriteArrayList);
+                    startActivityForResult(intent, FAVORITE_CITY_REQUEST_CODE);
+                }
+                return true;
+            }
+        });
+        popup.show();
     }
 
     private void setupRetrofitAndOkHttp() {
@@ -186,7 +252,7 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
     @Override
     protected void onStart() {
         super.onStart();
-        if(checkInternetAvailability()){
+        if(checkInternetAvailability() && !cityFetched){
             fetchCurrentLocation();
         } else {
             Snackbar.make(mainView, R.string.no_internet_message,
@@ -219,6 +285,7 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
             public void onNext(WeatherForecast value) {
                 try {
                     updateUI(value);
+                    fetchUpcomingWeatherForecast(cityName);
                 } catch (UnsupportedEncodingException e) {
                     e.printStackTrace();
                 }
@@ -285,7 +352,17 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == SEARCH_CITY_REQUEST_CODE) {
-            if (resultCode == RESULT_OK) {
+            if (resultCode == RESULT_OK && (data != null && data.hasExtra("cityName"))) {
+                cityFetched = true;
+                String cityName = data.getStringExtra("cityName");
+                fetchWeatherByCity(cityName);
+            }
+            if (resultCode == RESULT_CANCELED) {
+                //do nothing
+            }
+        } else if (requestCode == FAVORITE_CITY_REQUEST_CODE) {
+            if (resultCode == RESULT_OK && (data != null && data.hasExtra("cityName"))) {
+                cityFetched = true;
                 String cityName = data.getStringExtra("cityName");
                 fetchWeatherByCity(cityName);
             }
@@ -405,28 +482,41 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
     private void updateListView(Forecast value) {
         //sort out the values acc to date
         List<WeatherForecast> weatherList = value.getWeatherForecastList();
+        Map<String, List<WeatherForecast>> todayMap = new HashMap<String, List<WeatherForecast>>();
         Map<String, List<WeatherForecast>> sortedMap = new HashMap<String, List<WeatherForecast>>();
         for(WeatherForecast w : weatherList) {
-            if(sortedMap.containsKey(Utils.convertMillisecToDate(w.getDate()))){
-                List<WeatherForecast> tempList = sortedMap.get(Utils.convertMillisecToDate(w.getDate()));
-                tempList.add(w);
+            if(Utils.getCurrentDate().equals(Utils.convertMillisecToDate(w.getDate()))){
+                List<WeatherForecast> tempWeatherList = new ArrayList<>();
+                tempWeatherList.add(w);
+                todayMap.put(Utils.convertMillisecToDate(w.getDate()), tempWeatherList);
             } else {
-                List<WeatherForecast> tempList = new ArrayList<>();
-                tempList.add(w);
-                sortedMap.put(Utils.convertMillisecToDate(w.getDate()), tempList);
+                if (sortedMap.containsKey(Utils.convertMillisecToDate(w.getDate()))) {
+                    List<WeatherForecast> tempList = sortedMap.get(Utils.convertMillisecToDate(w.getDate()));
+                    tempList.add(w);
+                } else {
+                    List<WeatherForecast> tempList = new ArrayList<>();
+                    tempList.add(w);
+                    sortedMap.put(Utils.convertMillisecToDate(w.getDate()), tempList);
+                }
             }
         }
+        Map<String, List<WeatherForecast>> treeMap = new TreeMap<String, List<WeatherForecast>>(sortedMap);
         //populate recyclerview
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         rvForecast.setLayoutManager(layoutManager);
         rvForecast.setHasFixedSize(true);
-        ForecastAdapter adapter = new ForecastAdapter(this, sortedMap);
+        ForecastAdapter adapter = new ForecastAdapter(this, treeMap);
         rvForecast.setAdapter(adapter);
         adapter.notifyDataSetChanged();
     }
 
     private void updateUI(WeatherForecast value) throws UnsupportedEncodingException {
        txtCityName.setText(value.getName());
+       if(checkIfCityIsFav(value.getName())){
+           imgFavorite.setImageDrawable(getResources().getDrawable(R.drawable.ic_favorite_selected));
+       } else {
+           imgFavorite.setImageDrawable(getResources().getDrawable(R.drawable.ic_favorite_unselected));
+       }
         Weather weather = value.getWeather().get(0);
        txtMainWeather.setText(weather.getMain());
        txtWeatherDesc.setText(weather.getDescription());
@@ -445,26 +535,5 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
         txtHumidity.setText(value.getMain().getHumidity()+"%");
         txtCloud.setText(value.getClouds().getAll()+"%");
         txtWind.setText(value.getWind().getSpeed()+"m/s");
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_scrolling, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
     }
 }
