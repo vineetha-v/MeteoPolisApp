@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/viewRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    tools:context=".view.activity.MainActivity">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/app_bar"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/app_bar_height"
+        android:fitsSystemWindows="true"
+        android:theme="@style/AppTheme.AppBarOverlay">
+
+        <com.google.android.material.appbar.CollapsingToolbarLayout
+            android:id="@+id/toolbar_layout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fitsSystemWindows="true"
+            app:contentScrim="?attr/colorPrimary"
+            app:titleEnabled="false"
+            app:layout_scrollFlags="scroll|exitUntilCollapsed|snap"
+            app:toolbarId="@+id/toolbar">
+            <TextView
+                android:id="@+id/tvWeatherMain"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:text="Rain"
+                android:gravity="center_vertical"
+                android:paddingLeft="30dp"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                android:paddingStart="30dp" />
+            <ImageView
+                android:id="@+id/ivWeather"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:src="@drawable/ic_weather_placeholder"
+                android:layout_gravity="center|bottom"/>
+            <TextView
+                android:id="@+id/tvWeatherDesc"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:text="Light rain"
+                android:gravity="center|end"
+                android:layout_marginRight="24dp"
+                android:textColor="@android:color/white"
+                android:textSize="15sp"
+                android:layout_marginEnd="24dp" />
+        </com.google.android.material.appbar.CollapsingToolbarLayout>
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <include layout="@layout/content_scrolling" />
+
+    <include app:layout_anchor="@id/app_bar"
+        app:layout_anchorGravity="top|center"
+        layout="@layout/toolbar_layout"/>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

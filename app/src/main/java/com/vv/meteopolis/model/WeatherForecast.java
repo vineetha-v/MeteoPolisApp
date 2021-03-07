@@ -1,6 +1,7 @@
-package com.vv.meteopolis;
+package com.vv.meteopolis.model;
 
 import com.google.gson.annotations.SerializedName;
+import com.vv.meteopolis.model.Weather;
 
 import java.util.List;
 
@@ -30,54 +31,10 @@ public class WeatherForecast {
     @SerializedName("name")
     private String name;
 
-    private class Weather {
-        @SerializedName("id")
-        private int id;
+    @SerializedName("dt")
+    private long date;
 
-        @SerializedName("main")
-        private String main;
-
-        @SerializedName("description")
-        private String description;
-
-        @SerializedName("icon")
-        private String icon;
-
-        public int getId() {
-            return id;
-        }
-
-        public void setId(int id) {
-            this.id = id;
-        }
-
-        public String getMain() {
-            return main;
-        }
-
-        public void setMain(String main) {
-            this.main = main;
-        }
-
-        public String getDescription() {
-            return description;
-        }
-
-        public void setDescription(String description) {
-            this.description = description;
-        }
-
-        public String getIcon() {
-            return icon;
-        }
-
-        public void setIcon(String icon) {
-            this.icon = icon;
-        }
-    }
-
-
-    private class Main {
+    public class Main {
         @SerializedName("temp")
         private Double temp;
 
@@ -145,7 +102,7 @@ public class WeatherForecast {
         }
     }
 
-    private class Wind {
+    public class Wind {
 
         @SerializedName("speed")
         private Double speed;
@@ -170,7 +127,7 @@ public class WeatherForecast {
         }
     }
 
-    private class Clouds {
+    public class Clouds {
 
         @SerializedName("all")
         private int all;
@@ -295,6 +252,22 @@ public class WeatherForecast {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public long getDate() {
+        return date;
+    }
+
+    public void setDate(long date) {
+        this.date = date;
+    }
+
+    public List<Weather> getWeather() {
+        return weather;
+    }
+
+    public void setWeather(List<Weather> weather) {
+        this.weather = weather;
     }
 }
 

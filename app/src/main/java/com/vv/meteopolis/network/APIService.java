@@ -1,4 +1,7 @@
-package com.vv.meteopolis;
+package com.vv.meteopolis.network;
+
+import com.vv.meteopolis.model.Forecast;
+import com.vv.meteopolis.model.WeatherForecast;
 
 import retrofit2.http.GET;
 import retrofit2.http.Query;
@@ -13,4 +16,7 @@ public interface APIService {
 
     @GET("weather")
     Observable<WeatherForecast> getWeatherForecastByCity(@Query("q") String city_name, @Query("appid") String AppId);
+
+    @GET("forecast")
+    Observable<Forecast> getFiveWeatherForecastByCity(@Query("q") String city_name, @Query("appid") String AppId);
 }

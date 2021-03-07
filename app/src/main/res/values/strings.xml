@@ -4,6 +4,7 @@
     <string name="favorite">Favorite</string>
     <string name="search">Search</string>
     <string name="ow_app_id">c6f462fe69d4a14d792f92d5a40f9ea4</string>
+    <string name="weather_icon_base_url">http://openweathermap.org/img/wn/</string>
 
     <string name="location_permission_requirement"></string>
     <string name="ok">Ok</string>

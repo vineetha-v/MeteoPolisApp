@@ -1,7 +1,6 @@
-package com.vv.meteopolis;
+package com.vv.meteopolis.view.activity;
 
 import android.Manifest;
-import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -9,32 +8,42 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 
+import com.bumptech.glide.Glide;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
-import com.google.android.material.appbar.CollapsingToolbarLayout;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.ImageView;
+import android.widget.TextView;
+
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.gson.Gson;
-
-import org.jetbrains.annotations.NotNull;
+import com.vv.meteopolis.R;
+import com.vv.meteopolis.model.Forecast;
+import com.vv.meteopolis.model.Weather;
+import com.vv.meteopolis.model.WeatherForecast;
+import com.vv.meteopolis.network.APIService;
+import com.vv.meteopolis.utils.Utils;
+import com.vv.meteopolis.view.adapter.ForecastAdapter;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.concurrent.TimeUnit;
 
+import butterknife.BindView;
+import butterknife.ButterKnife;
 import io.reactivex.Observer;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Function;
@@ -52,14 +61,13 @@ import retrofit2.converter.gson.GsonConverterFactory;
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 
-import static com.vv.meteopolis.APIService.BASE_URL;
+import static com.vv.meteopolis.network.APIService.BASE_URL;
 
 public class MainActivity extends AppCompatActivity implements ActivityCompat.OnRequestPermissionsResultCallback {
 
     private static final int REQUEST_FINE_LOCATION_PERMISSIONS_REQUEST_CODE = 100;
     private static  final String TAG = MainActivity.class.getSimpleName();
     private FusedLocationProviderClient mLocationClient;
-    private View mainView;
     private Location mCurrentLocation;
     private Double mLatitude, mLongitude;
     private APIService apiService;
@@ -67,26 +75,31 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
     SharedPreferences sharedPreferences;
     SharedPreferences.Editor prefEditor;
 
+    @BindView(R.id.tvWeatherMain) TextView txtMainWeather;
+    @BindView(R.id.tvSecTemp) TextView txtSecTemp;
+    @BindView(R.id.tvCityName) TextView txtCityName;
+    @BindView(R.id.tvCloud) TextView txtCloud;
+    @BindView(R.id.tvPressure) TextView txtPressure;
+    @BindView(R.id.tvHumidity) TextView txtHumidity;
+    @BindView(R.id.tvWind) TextView txtWind;
+    @BindView(R.id.tvWeatherDesc) TextView txtWeatherDesc;
+    @BindView(R.id.tvMainTemp) TextView txtMainTemp;
+
+    @BindView(R.id.iv_favorite) ImageView imgFavorite;
+    @BindView(R.id.iv_search) ImageView imgSearch;
+    @BindView(R.id.iv_more) ImageView imgMore;
+    @BindView(R.id.ivWeather) ImageView imgWeather;
+
+    @BindView(R.id.rvDayWeather) RecyclerView rvForecast;
+
+    @BindView(R.id.viewRoot) View mainView;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_scrolling);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        CollapsingToolbarLayout toolBarLayout = (CollapsingToolbarLayout) findViewById(R.id.toolbar_layout);
-        toolBarLayout.setTitle(getTitle());
-
-//        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-//        fab.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-//                        .setAction("Action", null).show();
-//            }
-//        });
+        setContentView(R.layout.activity_main);
+        ButterKnife.bind(this);
         init();
-
-
     }
 
     private void init() {
@@ -167,7 +180,6 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
 
     private void showLastLocationWeather() {
         fetchWeatherForecast(getDouble("Lat", 0), getDouble("Long", 0));
-
     }
 
     private void fetchWeatherByCity(String cityName){
@@ -285,6 +297,7 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
                     Log.i(TAG, "Location detected");
                     fetchWeatherForecast(mLatitude, mLongitude);
                     fetchWeatherByCity("");
+                    fetchUpcomingWeatherForecast("");
 
                 } else {
                     Log.i(TAG, "Location can't be detected");
@@ -313,6 +326,7 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
                         public void onNext(WeatherForecast value) {
                             try {
                                 updateUI(value);
+                                fetchUpcomingWeatherForecast("");
                             } catch (UnsupportedEncodingException e) {
                                 e.printStackTrace();
                             }
@@ -328,10 +342,66 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
         });
     }
 
+    private void fetchUpcomingWeatherForecast(String cityName) {
+        Observable<Forecast> observable = apiService.getFiveWeatherForecastByCity(
+                "Pondicherry", getResources().getString(R.string.ow_app_id));
+        observable.subscribeOn(Schedulers.newThread())
+                .observeOn(AndroidSchedulers.mainThread())
+                .map(new Function<Forecast, Forecast>() {
+                    @Override
+                    public Forecast apply(Forecast weatherForecast) throws Exception {
+                        return weatherForecast;
+                    }
+                }).subscribe(new Observer<Forecast>() {
+            @Override
+            public void onSubscribe(Disposable d) {
+                Log.i(TAG, "onSubscribe");
+            }
+            @Override
+            public void onNext(Forecast value) {
+                updateListView(value);
+            }
+            @Override
+            public void onError(Throwable e) {
+                Log.i(TAG, "onError");
+            }
+            @Override
+            public void onComplete() {
+                Log.i(TAG, "onComplete");
+            }
+        });
+    }
+
+    private void updateListView(Forecast value) {
+        //populate recyclerview
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        rvForecast.setLayoutManager(layoutManager);
+        rvForecast.setHasFixedSize(true);
+        ForecastAdapter adapter = new ForecastAdapter(this, value.getWeatherForecastList());
+        rvForecast.setAdapter(adapter);
+        adapter.notifyDataSetChanged();
+    }
+
     private void updateUI(WeatherForecast value) throws UnsupportedEncodingException {
-        String output = new Gson().toJson(value);
-        byte[] utf8OutString = output.getBytes("UTF8");
-        Log.i(TAG, String.valueOf(utf8OutString));
+       txtCityName.setText(value.getName());
+        Weather weather = value.getWeather().get(0);
+       txtMainWeather.setText(weather.getMain());
+       txtWeatherDesc.setText(weather.getDescription());
+
+       String iconUrl = getResources().getString(R.string.weather_icon_base_url)+value.getWeather().get(0).getIcon()+"@2x.png";
+        Glide.with(this)
+                .load(iconUrl)
+                .placeholder(R.drawable.ic_weather_placeholder)
+                .error(R.drawable.ic_weather_placeholder)
+                .into(imgWeather);
+
+        txtMainTemp.setText(Utils.convertKelvinToCelsius(value.getMain().getTemp()));
+        txtSecTemp.setText("Feels like "+Utils.convertKelvinToCelsius(value.getMain().getFeels_like()));
+
+        txtPressure.setText(value.getMain().getPressure()+"hPa");
+        txtHumidity.setText(value.getMain().getHumidity()+"%");
+        txtCloud.setText(value.getClouds().getAll()+"%");
+        txtWind.setText(value.getWind().getSpeed()+"m/s");
     }
 
     @Override
