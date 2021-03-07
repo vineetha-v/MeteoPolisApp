@@ -174,10 +174,10 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
         SharedPreferences.Editor editor = sharedPreferences.edit();
         String city_name = txtCityName.getText().toString();
         if(checkIfCityIsFav(city_name)) {
-            favoriteArrayList.add(city_name);
+            favoriteArrayList.remove(city_name);
             imgFavorite.setImageDrawable(getResources().getDrawable(R.drawable.ic_favorite_unselected));
         } else {
-            favoriteArrayList.remove(city_name);
+            favoriteArrayList.add(city_name);
             imgFavorite.setImageDrawable(getResources().getDrawable(R.drawable.ic_favorite_selected));
         }
         String jsonConvert = gson.toJson(favoriteArrayList);

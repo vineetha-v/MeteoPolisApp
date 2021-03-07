@@ -35,19 +35,21 @@
                 android:paddingStart="30dp" />
             <ImageView
                 android:id="@+id/ivWeather"
-                android:layout_width="100dp"
-                android:layout_height="100dp"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
                 android:src="@drawable/ic_weather_placeholder"
-                android:layout_gravity="center|bottom"/>
+                android:layout_marginEnd="35dp"
+                android:layout_gravity="bottom|right"/>
             <TextView
                 android:id="@+id/tvWeatherDesc"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:gravity="center|end"
-                android:layout_marginRight="24dp"
+                android:gravity="bottom"
+                android:paddingLeft="30dp"
+                android:layout_marginBottom="40dp"
                 android:textColor="@android:color/white"
                 android:textSize="15sp"
-                android:layout_marginEnd="24dp" />
+                android:paddingStart="30dp" />
         </com.google.android.material.appbar.CollapsingToolbarLayout>
 
     </com.google.android.material.appbar.AppBarLayout>
