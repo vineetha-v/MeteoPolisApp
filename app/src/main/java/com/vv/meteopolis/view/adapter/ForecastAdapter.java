@@ -12,8 +12,10 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.vv.meteopolis.R;
 import com.vv.meteopolis.model.WeatherForecast;
 import com.vv.meteopolis.utils.Utils;
+import com.vv.meteopolis.view.activity.MainActivity;
 
 import java.util.List;
+import java.util.Map;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -21,11 +23,13 @@ import butterknife.ButterKnife;
 public class ForecastAdapter extends RecyclerView.Adapter<ForecastHolder> {
 
     private Context mContext;
-    private List<WeatherForecast> weatherList;
+    private  Map<String, List<WeatherForecast>>  weatherListMap;
+    private String[] daysList;
 
-    public ForecastAdapter(Context mContext, List<WeatherForecast> weatherList) {
+    public ForecastAdapter(Context mContext,  Map<String, List<WeatherForecast>> sortedMap) {
         this.mContext = mContext;
-        this.weatherList = weatherList;
+        this.weatherListMap = sortedMap;
+        daysList = this.weatherListMap.keySet().toArray(new String[sortedMap.size()]);
     }
 
     @NonNull
@@ -37,14 +41,14 @@ public class ForecastAdapter extends RecyclerView.Adapter<ForecastHolder> {
 
     @Override
     public void onBindViewHolder(@NonNull ForecastHolder holder, int position) {
-        WeatherForecast weatherObject = weatherList.get(position);
-        holder.day.setText(Utils.convertMillisecToDate(weatherObject.getDate()));
-        holder.temperature.setText(Utils.convertKelvinToCelsius(weatherObject.getMain().getTemp()));
+        List<WeatherForecast> weatherObject = weatherListMap.get(daysList[position]);
+        holder.day.setText(Utils.convertMillisecToDate(weatherObject.get(0).getDate()));
+        holder.temperature.setText(Utils.convertKelvinToCelsius(weatherObject.get(0).getMain().getTemp()));
     }
 
     @Override
     public int getItemCount() {
-        return weatherList.size();
+        return daysList.length;
     }
 
 }

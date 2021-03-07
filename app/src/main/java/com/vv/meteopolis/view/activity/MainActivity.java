@@ -1,6 +1,8 @@
 package com.vv.meteopolis.view.activity;
 
 import android.Manifest;
+import android.app.Activity;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -15,6 +17,7 @@ import com.google.android.gms.tasks.Task;
 import com.google.android.material.snackbar.Snackbar;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -40,10 +43,17 @@ import com.vv.meteopolis.view.adapter.ForecastAdapter;
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import butterknife.OnClick;
 import io.reactivex.Observer;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Function;
@@ -66,7 +76,10 @@ import static com.vv.meteopolis.network.APIService.BASE_URL;
 public class MainActivity extends AppCompatActivity implements ActivityCompat.OnRequestPermissionsResultCallback {
 
     private static final int REQUEST_FINE_LOCATION_PERMISSIONS_REQUEST_CODE = 100;
+    private static final int SEARCH_CITY_REQUEST_CODE = 101;
+
     private static  final String TAG = MainActivity.class.getSimpleName();
+
     private FusedLocationProviderClient mLocationClient;
     private Location mCurrentLocation;
     private Double mLatitude, mLongitude;
@@ -110,6 +123,11 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
         mLocationClient = LocationServices.getFusedLocationProviderClient(this);
         httpCacheDirectory = new File(getCacheDir(), "offlineCache");
         setupRetrofitAndOkHttp();
+    }
+
+    @OnClick(R.id.iv_search)
+    void searchCity(){
+        startActivityForResult(new Intent(MainActivity.this, SearchActivity.class), SEARCH_CITY_REQUEST_CODE);
     }
 
     private void setupRetrofitAndOkHttp() {
@@ -184,7 +202,7 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
 
     private void fetchWeatherByCity(String cityName){
         Observable<WeatherForecast> observable = apiService.getWeatherForecastByCity(
-                "Pondicherry", getResources().getString(R.string.ow_app_id));
+                cityName, getResources().getString(R.string.ow_app_id));
         observable.subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread())
                 .map(new Function<WeatherForecast, WeatherForecast>() {
@@ -264,6 +282,20 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
     }
 
     @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == SEARCH_CITY_REQUEST_CODE) {
+            if (resultCode == RESULT_OK) {
+                String cityName = data.getStringExtra("cityName");
+                fetchWeatherByCity(cityName);
+            }
+            if (resultCode == RESULT_CANCELED) {
+                //do nothing
+            }
+        }
+    }
+
+    @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if(requestCode == REQUEST_FINE_LOCATION_PERMISSIONS_REQUEST_CODE) {
             if(grantResults.length > 0  && grantResults[0] == PackageManager.PERMISSION_GRANTED){
@@ -296,8 +328,6 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
                     prefEditor.commit();
                     Log.i(TAG, "Location detected");
                     fetchWeatherForecast(mLatitude, mLongitude);
-                    fetchWeatherByCity("");
-                    fetchUpcomingWeatherForecast("");
 
                 } else {
                     Log.i(TAG, "Location can't be detected");
@@ -326,7 +356,7 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
                         public void onNext(WeatherForecast value) {
                             try {
                                 updateUI(value);
-                                fetchUpcomingWeatherForecast("");
+                                fetchUpcomingWeatherForecast(value.getName());
                             } catch (UnsupportedEncodingException e) {
                                 e.printStackTrace();
                             }
@@ -344,7 +374,7 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
 
     private void fetchUpcomingWeatherForecast(String cityName) {
         Observable<Forecast> observable = apiService.getFiveWeatherForecastByCity(
-                "Pondicherry", getResources().getString(R.string.ow_app_id));
+                cityName, getResources().getString(R.string.ow_app_id));
         observable.subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread())
                 .map(new Function<Forecast, Forecast>() {
@@ -373,11 +403,24 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
     }
 
     private void updateListView(Forecast value) {
+        //sort out the values acc to date
+        List<WeatherForecast> weatherList = value.getWeatherForecastList();
+        Map<String, List<WeatherForecast>> sortedMap = new HashMap<String, List<WeatherForecast>>();
+        for(WeatherForecast w : weatherList) {
+            if(sortedMap.containsKey(Utils.convertMillisecToDate(w.getDate()))){
+                List<WeatherForecast> tempList = sortedMap.get(Utils.convertMillisecToDate(w.getDate()));
+                tempList.add(w);
+            } else {
+                List<WeatherForecast> tempList = new ArrayList<>();
+                tempList.add(w);
+                sortedMap.put(Utils.convertMillisecToDate(w.getDate()), tempList);
+            }
+        }
         //populate recyclerview
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         rvForecast.setLayoutManager(layoutManager);
         rvForecast.setHasFixedSize(true);
-        ForecastAdapter adapter = new ForecastAdapter(this, value.getWeatherForecastList());
+        ForecastAdapter adapter = new ForecastAdapter(this, sortedMap);
         rvForecast.setAdapter(adapter);
         adapter.notifyDataSetChanged();
     }
