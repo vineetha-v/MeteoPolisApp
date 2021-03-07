@@ -43,7 +43,7 @@ public class ForecastAdapter extends RecyclerView.Adapter<ForecastAdapter.Foreca
     public void onBindViewHolder(@NonNull ForecastHolder holder, int position) {
         List<WeatherForecast> weatherObject = weatherListMap.get(daysList[position]);
         holder.day.setText(Utils.convertMillisecToDate(weatherObject.get(0).getDate()));
-        holder.temperature.setText(Utils.convertKelvinToCels ius(weatherObject.get(0).getMain().getTemp()));
+        holder.temperature.setText(Utils.convertKelvinToCelsius(weatherObject.get(0).getMain().getTemp()));
     }
 
     @Override

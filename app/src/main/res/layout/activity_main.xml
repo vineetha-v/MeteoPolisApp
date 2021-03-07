@@ -28,7 +28,6 @@
                 android:id="@+id/tvWeatherMain"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:text="Rain"
                 android:gravity="center_vertical"
                 android:paddingLeft="30dp"
                 android:textColor="@android:color/white"
@@ -44,7 +43,6 @@
                 android:id="@+id/tvWeatherDesc"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:text="Light rain"
                 android:gravity="center|end"
                 android:layout_marginRight="24dp"
                 android:textColor="@android:color/white"
@@ -53,10 +51,33 @@
         </com.google.android.material.appbar.CollapsingToolbarLayout>
 
     </com.google.android.material.appbar.AppBarLayout>
-
     <include layout="@layout/content_scrolling" />
 
     <include app:layout_anchor="@id/app_bar"
         app:layout_anchorGravity="top|center"
         layout="@layout/toolbar_layout"/>
+    <FrameLayout
+        android:id="@+id/loader"
+        android:visibility="gone"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/transparent">
+    <ProgressBar
+        android:id="@+id/KLoadingSpin"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_gravity="center"
+        android:indeterminate="true"
+        />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Please wait...\nFetching weather for you!!!"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:textSize="18sp"
+            android:textColor="@color/colorPrimary"
+            android:layout_marginTop="70dp"
+            />
+    </FrameLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

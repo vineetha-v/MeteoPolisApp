@@ -22,6 +22,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.widget.ContentLoadingProgressBar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -29,6 +30,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.TextView;
@@ -115,6 +117,9 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
     @BindView(R.id.rvDayWeather) RecyclerView rvForecast;
 
     @BindView(R.id.viewRoot) View mainView;
+    @BindView(R.id.loader)
+    FrameLayout klSpinner;
+
     private List<String> favoriteArrayList = new ArrayList<>();
 
     @Override
@@ -126,7 +131,6 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
     }
 
     private void init() {
-
         mainView = findViewById(R.id.viewRoot);
         sharedPreferences = getSharedPreferences("MeteoPolisPref",MODE_PRIVATE);
         prefEditor = sharedPreferences.edit();
@@ -141,6 +145,7 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
         startActivityForResult(new Intent(MainActivity.this, SearchActivity.class), SEARCH_CITY_REQUEST_CODE);
     }
 
+    //method to check if the city is selected favorite or not
     private boolean checkIfCityIsFav(String cityName) {
         if(favoriteArrayList.contains(cityName)) {
             imgFavorite.setImageDrawable(getResources().getDrawable(R.drawable.ic_favorite_selected));
@@ -151,6 +156,7 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
         }
     }
 
+    //Fetch the favorite cities' list
     private void fetchFavsList() {
         Gson gson = new Gson();
         String json = sharedPreferences.getString("favorite", null);
@@ -262,11 +268,15 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
         }
     }
 
+    //This is in case of no internet
     private void showLastLocationWeather() {
         fetchWeatherForecast(getDouble("Lat", 0), getDouble("Long", 0));
     }
 
+    //Fetch weather details based on city name
     private void fetchWeatherByCity(String cityName){
+        klSpinner.setVisibility(View.VISIBLE);
+
         Observable<WeatherForecast> observable = apiService.getWeatherForecastByCity(
                 cityName, getResources().getString(R.string.ow_app_id));
         observable.subscribeOn(Schedulers.newThread())
@@ -413,8 +423,10 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
             }
         });
     }
-
+    //Fetch weather details based on lat/long details
     private void fetchWeatherForecast(Double mLatitude, Double mLongitude) {
+        klSpinner.setVisibility(View.VISIBLE);
+
         Observable<WeatherForecast> observable = apiService.getWeatherForecast(mLatitude,
                 mLongitude, getResources().getString(R.string.ow_app_id));
         observable.subscribeOn(Schedulers.newThread())
@@ -449,7 +461,11 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
         });
     }
 
+    //Fetch weather details of upcoming 5 days based on current city name selected
     private void fetchUpcomingWeatherForecast(String cityName) {
+        klSpinner.setVisibility(View.VISIBLE);
+        
+
         Observable<Forecast> observable = apiService.getFiveWeatherForecastByCity(
                 cityName, getResources().getString(R.string.ow_app_id));
         observable.subscribeOn(Schedulers.newThread())
@@ -480,6 +496,8 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
     }
 
     private void updateListView(Forecast value) {
+       klSpinner.setVisibility(View.GONE);
+
         //sort out the values acc to date
         List<WeatherForecast> weatherList = value.getWeatherForecastList();
         Map<String, List<WeatherForecast>> todayMap = new HashMap<String, List<WeatherForecast>>();
@@ -511,6 +529,8 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
     }
 
     private void updateUI(WeatherForecast value) throws UnsupportedEncodingException {
+       klSpinner.setVisibility(View.GONE);
+
        txtCityName.setText(value.getName());
        if(checkIfCityIsFav(value.getName())){
            imgFavorite.setImageDrawable(getResources().getDrawable(R.drawable.ic_favorite_selected));
